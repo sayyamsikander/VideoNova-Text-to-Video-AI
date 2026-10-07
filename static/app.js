@@ -169,6 +169,17 @@ function initStatusObserver(){
   syncEngineStatus();
 }
 
+window.addEventListener('videonova-engine-capability-error',(event)=>{
+  state.engineReady=false;
+  $('#generateBtn').disabled=true;
+  $('#progressState').classList.add('hidden');
+  $('#emptyState').classList.remove('hidden');
+  $('#providerBadge').textContent='Browser/GPU unsupported';
+  $('#providerBadge').style.color='#ff9ba5';
+  setStatus('Unsupported','error');
+  showNotice(event.detail||'This browser/GPU cannot run the WebGPU video model.','error');
+});
+
 window.addEventListener('videonova-engine-load-error',(event)=>{
   state.engineReady=false;
   $('#generateBtn').disabled=true;
