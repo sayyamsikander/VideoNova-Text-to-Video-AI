@@ -1,0 +1,69 @@
+name: VideoNova smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: node --check static/app.js
+
+      - name: Check required DOM bridge
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("index.html").read_text()
+          required=[
+            "user-input","send-button","status","video_container",
+            "img_canvas_0","img_canvas_1","img_canvas_2","img_canvas_3",
+            "img_canvas_4","img_canvas_5","img_canvas_6","img_canvas_7",
+            "generateBtn","downloadBtn"
+          ]
+          missing=[x for x in required if f'id="{x}"' not in html]
+          assert not missing, f"Missing DOM ids: {missing}"
+          assert "builderforce-studio" not in html
+          assert "esm.sh" not in html
+          assert "/api/generate" not in Path("static/app.js").read_text()
+          print("DOM/static checks passed")
+          PY
+
+      - name: Check browser runtime URLs
+        run: |
+          set -euxo pipefail
+          curl -fL --retry 3 --connect-timeout 20             -o /tmp/t2v-main.js             https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/dist/main.js
+          test "$(wc -c < /tmp/t2v-main.js)" -gt 1000000
+
+          curl -fL --retry 3 --connect-timeout 20             -o /tmp/ort-webgpu.mjs             https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/7fd6f237f2818b16070c.mjs
+          test "$(wc -c < /tmp/ort-webgpu.mjs)" -gt 100000
+
+          curl -fL --retry 3 --connect-timeout 20             -o /tmp/ort-webgpu.wasm             https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/aa2a6c407dffa367d229.wasm
+          test "$(wc -c < /tmp/ort-webgpu.wasm)" -gt 20000000
+
+          curl -fL --retry 3 --connect-timeout 20             -o /tmp/transformers.js             https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js
+          test "$(wc -c < /tmp/transformers.js)" -gt 500000
+
+      - name: Headless browser smoke test
+        run: |
+          python3 -m http.server 8000 >/tmp/videonova-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME"             --headless=new             --no-sandbox             --disable-dev-shm-usage             --virtual-time-budget=15000             --dump-dom             http://127.0.0.1:8000/ > /tmp/dom.html
+          grep -q "VideoNova" /tmp/dom.html
+          if grep -q "Runtime load failed" /tmp/dom.html; then
+            cat /tmp/dom.html
+            exit 1
+          fi
+          echo "Headless page load passed"
