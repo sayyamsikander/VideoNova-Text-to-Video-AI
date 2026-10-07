@@ -125,7 +125,15 @@ function renderProgress(job){
 
 $('#generateBtn').onclick=async()=>{
   hideNotice(); const payload=formPayload(); if(payload.prompt.length<3){showNotice('Please enter a text prompt.');return}
-  if(payload.provider==='hf' && !state.config?.hf?.configured){showNotice('Hugging Face is not configured. Add HF_TOKEN or switch to ComfyUI.');return}
+  if(payload.provider==='hf' && !state.config?.hf?.configured){
+    if(IS_GITHUB_PAGES){
+      showNotice('Open Setup and add your Hugging Face token for this browser tab.');
+      showView('setup');
+    } else {
+      showNotice('Hugging Face is not configured. Add HF_TOKEN or switch to ComfyUI.');
+    }
+    return;
+  }
   if(payload.provider==='comfyui' && !state.config?.comfyui?.configured){showNotice('ComfyUI workflow is not configured. Open Setup for instructions.');return}
   setGenerating(true); $('#progressTitle').textContent='Generating your video…';
   $('#statEngine').textContent=payload.provider==='hf'?'Hugging Face':'ComfyUI'; $('#statModel').textContent=$('#model').options[$('#model').selectedIndex]?.textContent||'Workflow'; $('#statSeed').textContent=payload.seed??'random';
