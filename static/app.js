@@ -491,6 +491,10 @@ async function runCompatibilityVideo(prompt) {
   setStatus('Ready', 'complete');
   addHistory({prompt, createdAt: Date.now(), mode: 'Universal mode'});
   showNotice('Video created successfully in Universal mode. Click Download Video to save it.', 'success');
+  if (new URLSearchParams(location.search).get('selftest') === 'fallback') {
+    document.documentElement.dataset.videonovaSelftest = blob.size > 1000 ? 'pass' : 'fail';
+    document.documentElement.dataset.videonovaBlobSize = String(blob.size);
+  }
 }
 
 $('#generateBtn').addEventListener('click', () => {
@@ -571,3 +575,14 @@ $('#clearHistoryBtn').addEventListener('click', () => {
 checkBrowser();
 initStatusObserver();
 renderHistory();
+
+const selftestParams = new URLSearchParams(location.search);
+if (selftestParams.get('selftest') === 'fallback') {
+  document.documentElement.dataset.videonovaSelftest = 'running';
+  state.engineReady = false;
+  state.runtimeFailed = true;
+  state.compatReason = 'Automated compatibility test';
+  $('#prompt').value = 'A glowing sphere moving through a star field';
+  $('#prompt').dispatchEvent(new Event('input'));
+  setTimeout(() => $('#generateBtn').click(), 250);
+}
