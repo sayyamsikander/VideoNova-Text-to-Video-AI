@@ -67,3 +67,20 @@ jobs:
             exit 1
           fi
           echo "Headless page load passed"
+
+      - name: Check deployed GitHub Pages
+        run: |
+          set -euxo pipefail
+          LIVE="https://sayyamsikander.github.io/VideoNova-Text-to-Video-AI/"
+          OK=0
+          for i in $(seq 1 20); do
+            if curl -fsSL --connect-timeout 15 "$LIVE" -o /tmp/live.html; then
+              if grep -q "TEXT-TO-VIDEO ZERO" /tmp/live.html && grep -q "WebGPU-Video-Diffusion/dist/main.js" /tmp/live.html; then
+                OK=1
+                break
+              fi
+            fi
+            sleep 6
+          done
+          test "$OK" -eq 1
+          echo "Live GitHub Pages build is current"
