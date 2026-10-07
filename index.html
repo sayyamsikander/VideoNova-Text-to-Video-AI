@@ -26,7 +26,7 @@
       <div class="hero">
         <p class="eyebrow">TEXT-TO-VIDEO ZERO · WEBGPU · NO LOGIN</p>
         <h1>Generate video directly in your browser.</h1>
-        <p>VideoNova uses Stable Diffusion 1.5 + Text-to-Video Zero in WebGPU. The model loads in the browser; no VideoNova backend or API account is required.</p>
+        <p>VideoNova uses WebGPU AI when your device supports it. If the AI model cannot load, Universal mode automatically creates a prompt-driven downloadable video in the browser—still with no backend, account, or API key.</p>
       </div>
 
       <div class="workspace">
@@ -54,15 +54,15 @@
             <div><span>Output</span><strong>8 frames · 512×512</strong></div>
           </div>
 
-          <div class="browser-note"><strong>First load can be large:</strong> public model files are downloaded automatically and may take several minutes. The Generate button enables only after the model says Ready.</div>
+          <div class="browser-note"><strong>Generate works immediately:</strong> if WebGPU AI is ready, VideoNova uses it. Otherwise Universal mode creates the video locally while the AI runtime is unavailable or still loading.</div>
           <div id="notice" class="notice hidden"></div>
-          <button id="generateBtn" class="primary large" disabled>Generate video <span>→</span></button>
+          <button id="generateBtn" class="primary large">Generate video <span>→</span></button>
         </section>
 
         <aside class="panel preview-panel">
           <div class="section-head"><div><span class="step">02</span><h2>Preview</h2></div><span id="statusPill" class="status idle">Loading</span></div>
           <div id="previewStage" class="preview-stage ratio-1-1">
-            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Browser AI is loading</strong><span>Generation unlocks when the model is ready.</span></div>
+            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Ready to create</strong><span>AI mode is used when supported; Universal mode works as the fallback.</span></div>
             <div id="video_container" class="engine-video hidden"></div>
             <div id="progressState" class="progress-state">
               <div class="spinner"></div>
@@ -74,7 +74,7 @@
           </div>
 
           <div class="result-actions">
-            <button id="downloadBtn" class="primary disabled">Download WebM</button>
+            <button id="downloadBtn" class="primary disabled">Download Video</button>
             <button id="copyPromptBtn" class="secondary">Copy prompt</button>
           </div>
 
