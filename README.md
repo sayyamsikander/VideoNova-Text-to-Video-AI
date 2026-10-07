@@ -1,116 +1,113 @@
-# VideoNova — Text-to-Video AI Website
+# VideoNova — Self-Hosted Text-to-Video AI
 
-A complete, responsive text-to-video web app starter with:
+VideoNova is a self-hosted text-to-video website. Generation runs on your own GPU with the open-source Wan 2.1 1.3B model.
 
-- Text prompt + negative prompt
-- Prompt enhancer and style presets
-- Hugging Face Inference Providers integration
-- Local ComfyUI integration
-- Model selector
-- Aspect ratios: 16:9, 9:16, 1:1
-- Duration, FPS, quality, seed, steps and guidance controls
-- Generation progress + cancellation
+**No API key. No hosted inference account. No Hugging Face login. No ComfyUI connection.**
+
+## What is included
+
+- Text-to-video generation on your own hardware
+- Prompt and negative prompt
+- Cinematic / anime / photoreal / product / fantasy prompt presets
+- 16:9, 9:16 and 1:1 output
+- 480p, 720p and 1080p controls
+- Duration, FPS, seed, steps and guidance controls
+- Generation status
 - Video preview
-- Direct video download
-- Local browser generation history
-- Responsive desktop/mobile UI
-- Server-side secrets (tokens are not exposed to the browser)
+- MP4 download
+- Local browser history
+- Responsive UI
+- Automatic anonymous download of the public model on first use
+- Manual model downloader for offline reuse
 
-## GitHub Pages — working static mode
+## Requirements
 
-The published GitHub Pages frontend can generate video directly from the browser:
+- Python 3.10+
+- A supported GPU
+- NVIDIA CUDA is recommended
+- Apple Silicon / MPS can be attempted
+- About 11GB+ VRAM is the practical target for the default Wan 2.1 1.3B model
+- Enough disk space for the model files and generated videos
 
-1. Open the site and choose **Setup**.
-2. Paste a Hugging Face token that has **Inference Providers** permission.
-3. Click **Use token**.
-4. Return to **Create**, enter a prompt, and generate.
+CPU-only video generation is intentionally disabled because it is not practical for this model.
 
-The token is kept in `sessionStorage` for the current browser tab only; it is not committed to GitHub. This is suitable for personal testing. For a public production app, use the Python backend/proxy so a personal token is not exposed to browser JavaScript.
+## Fast start
 
-Live site: `https://sayyamsikander.github.io/VideoNova-Text-to-Video-AI/`
+### Windows
 
-## Option 1 — Online generation with Hugging Face
+```bat
+start.bat
+```
 
-Requirements: Python 3.10+.
+### Linux / macOS
+
+```bash
+bash start.sh
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+The first generation can automatically download the public model anonymously. No account or token is used.
+
+## Download the model before starting
+
+If you prefer to download it once before using the website:
 
 ```bash
 python -m pip install -r requirements.txt
+python download_model.py
+python server.py
+```
+
+The model is stored at:
+
+```text
+models/Wan2.1-T2V-1.3B-Diffusers/
+```
+
+The `models/` folder is ignored by Git so the large weights are not uploaded to your repository.
+
+## Configuration
+
+Copy the example environment file if you want custom settings:
+
+```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your token:
+Default configuration:
 
 ```env
-HF_TOKEN=hf_your_token_here
-HF_PROVIDER=fal-ai
+HOST=127.0.0.1
+PORT=8080
+VIDEONOVA_MODEL_ID=Wan-AI/Wan2.1-T2V-1.3B-Diffusers
+VIDEONOVA_MODEL_PATH=./models/Wan2.1-T2V-1.3B-Diffusers
+VIDEONOVA_AUTO_DOWNLOAD=true
+VIDEONOVA_DEVICE=
 ```
 
-Then run:
+Set `VIDEONOVA_DEVICE=cuda` or `mps` only if automatic detection does not choose correctly.
 
-```bash
-./start.sh
-```
+## GitHub Pages
 
-On Windows, set the environment variables in your shell/system and run `start.bat`, or run `python server.py`.
+The GitHub Pages URL is a **static preview only**. GitHub Pages cannot run Python or provide the GPU compute required by a video diffusion model.
 
-Open: `http://127.0.0.1:8080`
+For the real generator, run this repository on your own GPU computer and use `http://127.0.0.1:8080`.
 
-The default model list includes:
+If you own a public GPU server, you can run the same repository there under your own domain. No external inference account is required.
 
-- `Wan-AI/Wan2.2-TI2V-5B`
-- `tencent/HunyuanVideo`
-- `Lightricks/LTX-Video-0.9.8-13B-distilled`
+## Privacy
 
-Provider/model availability can change. If a chosen provider does not support a particular model, switch the model or the `HF_PROVIDER` value.
+Prompts and generated videos are handled by your local VideoNova process. Generated MP4 files are written to `outputs/`. The repository ignores model weights, generated outputs, virtual environments and `.env` files.
 
-## Option 2 — Local generation with ComfyUI
+## Default AI model
 
-This avoids per-request API charges, but you need hardware capable of running the selected video model.
+The default model is `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` using Diffusers' `WanPipeline`. It is downloaded anonymously as a public model and then loaded from local files for generation.
 
-1. Install and start ComfyUI, normally on `http://127.0.0.1:8188`.
-2. Load a text-to-video workflow (for example a Wan workflow from ComfyUI's Video templates).
-3. Export/save the workflow in **API format**.
-4. Replace values in the API JSON that you want the website to control with these exact placeholders:
+## License
 
-```text
-__PROMPT__
-__NEGATIVE_PROMPT__
-__SEED__
-__WIDTH__
-__HEIGHT__
-__FRAMES__
-__FPS__
-```
-
-5. Save the result as `config/comfyui_api_workflow.json`.
-6. Make sure the workflow saves the finished video file (MP4 or WebM). The site detects the saved video from ComfyUI history and makes it downloadable.
-
-Example `.env`:
-
-```env
-COMFYUI_URL=http://127.0.0.1:8188
-COMFYUI_WORKFLOW=./config/comfyui_api_workflow.json
-```
-
-## Security notes
-
-- Never put API keys in `static/app.js` or any browser-visible file.
-- Keep `HF_TOKEN` only in the environment on the server.
-- The included server binds to `127.0.0.1` by default. If you expose it publicly, add authentication, HTTPS, rate limiting, persistent job storage, abuse controls, and a reverse proxy.
-
-## Production upgrades you may add
-
-- User login/accounts
-- Database-backed history
-- Credits/billing
-- Queue workers (Celery/RQ/Redis)
-- Object storage (S3/R2)
-- WebSocket progress
-- Moderation and upload scanning
-- Admin dashboard
-- Multiple provider adapters
-- CDN delivery
-
-## Important cost note
-
-The website code is free. Hosted video generation is compute-heavy and generally costs money after free credits are used. The truly no-API-cost route is local/open-source generation through ComfyUI on your own GPU.
+VideoNova source code is provided under the MIT license in this repository. The included/default AI model has its own upstream license; review the model's license before redistribution or commercial deployment.
