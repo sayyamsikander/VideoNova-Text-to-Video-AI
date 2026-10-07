@@ -5,28 +5,28 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#08090d" />
   <title>VideoNova — Browser Text to Video AI</title>
-  <meta name="description" content="Generate AI videos directly in your browser with WebGPU. No account, API key, install, or backend." />
+  <meta name="description" content="Generate 8-frame AI video animations directly in the browser with WebGPU. No account, API key, install, or backend." />
   <link rel="stylesheet" href="./static/styles.css" />
 </head>
 <body>
   <div class="bg-orb orb-a"></div><div class="bg-orb orb-b"></div>
 
   <header class="topbar shell">
-    <a class="brand" href="#create" aria-label="VideoNova home"><span class="logo">V</span><span>VideoNova</span></a>
+    <a class="brand" href="#create"><span class="logo">V</span><span>VideoNova</span></a>
     <nav>
       <button class="nav-btn active" data-view="create">Create</button>
       <button class="nav-btn" data-view="history">History</button>
       <button class="nav-btn" data-view="setup">How it works</button>
     </nav>
-    <span id="providerBadge" class="badge">Checking browser GPU…</span>
+    <span id="providerBadge" class="badge">Checking WebGPU…</span>
   </header>
 
   <main class="shell">
     <section id="createView" class="view active">
       <div class="hero">
-        <p class="eyebrow">100% BROWSER AI · NO ACCOUNT · NO BACKEND</p>
-        <h1>Turn text into video in your browser.</h1>
-        <p>Type a scene and click Generate. VideoNova downloads the public model automatically on first use, runs AI on your browser GPU, and returns a downloadable MP4.</p>
+        <p class="eyebrow">TEXT-TO-VIDEO ZERO · WEBGPU · NO LOGIN</p>
+        <h1>Generate video directly in your browser.</h1>
+        <p>VideoNova uses Stable Diffusion 1.5 + Text-to-Video Zero in WebGPU. The model loads in the browser; no VideoNova backend or API account is required.</p>
       </div>
 
       <div class="workspace">
@@ -36,7 +36,7 @@
             <button id="enhanceBtn" class="ghost">✨ Enhance prompt</button>
           </div>
 
-          <textarea id="prompt" maxlength="4000" placeholder="Example: A cinematic drone shot gliding over a futuristic coastal city at sunrise, soft fog between glass towers, realistic reflections, smooth camera motion…"></textarea>
+          <textarea id="prompt" maxlength="4000" placeholder="Example: A jellyfish moves gracefully through a glowing blue ocean"></textarea>
           <div class="textarea-meta"><span id="charCount">0 / 4000</span><button id="randomPromptBtn" class="text-btn">Try an example</button></div>
 
           <div class="preset-row" id="stylePresets">
@@ -47,68 +47,41 @@
             <button data-style="fantasy" class="chip">Fantasy</button>
           </div>
 
-          <div class="grid settings-grid">
-            <label>Engine
-              <select id="provider" disabled><option>Browser WebGPU</option></select>
-            </label>
-            <label>Model
-              <select id="model" disabled><option value="lcm-tiny-sd">LCM Tiny SD</option></select>
-            </label>
-            <label>Aspect ratio
-              <select id="aspect"><option>16:9</option><option>9:16</option><option>1:1</option></select>
-            </label>
-            <label>Resolution
-              <select id="quality" disabled><option>Browser optimized</option></select>
-            </label>
-            <label>Duration
-              <select id="duration"><option value="1">1 sec</option><option value="2" selected>2 sec</option><option value="3">3 sec</option></select>
-            </label>
-            <label>FPS
-              <select id="fps"><option value="8" selected>8</option><option value="12">12</option></select>
-            </label>
+          <div class="engine-facts">
+            <div><span>Engine</span><strong>WebGPU</strong></div>
+            <div><span>Model</span><strong>Stable Diffusion 1.5</strong></div>
+            <div><span>Method</span><strong>Text-to-Video Zero</strong></div>
+            <div><span>Output</span><strong>8 frames · 512×512</strong></div>
           </div>
 
-          <details class="advanced">
-            <summary>Advanced controls</summary>
-            <div class="grid settings-grid advanced-grid">
-              <label class="wide">Negative prompt<textarea id="negativePrompt" rows="3" placeholder="blurry, low quality, distorted, artifacts"></textarea></label>
-              <label>Seed<div class="inline"><input id="seed" type="number" min="0" max="2147483647" placeholder="Random" /><button id="seedBtn" class="icon-btn" title="Randomize seed">↻</button></div></label>
-              <label>Steps<input id="steps" type="number" min="1" max="8" value="4" /></label>
-              <label>Guidance<input id="guidance" type="number" min="0" max="4" step="0.1" value="1" /></label>
-            </div>
-          </details>
-
-          <div class="browser-note">
-            <strong>First generation:</strong> model files download automatically and are cached by the browser. No signup or API key is requested.
-          </div>
+          <div class="browser-note"><strong>First load can be large:</strong> public model files are downloaded automatically and may take several minutes. The Generate button enables only after the model says Ready.</div>
           <div id="notice" class="notice hidden"></div>
-          <button id="generateBtn" class="primary large">Generate video <span>→</span></button>
+          <button id="generateBtn" class="primary large" disabled>Generate video <span>→</span></button>
         </section>
 
         <aside class="panel preview-panel">
-          <div class="section-head"><div><span class="step">02</span><h2>Preview</h2></div><span id="statusPill" class="status idle">Ready</span></div>
-          <div id="previewStage" class="preview-stage ratio-16-9">
-            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Your video will appear here</strong><span>Nothing is uploaded from your prompt to a VideoNova backend.</span></div>
-            <video id="video" controls playsinline class="hidden"></video>
-            <div id="progressState" class="progress-state hidden">
+          <div class="section-head"><div><span class="step">02</span><h2>Preview</h2></div><span id="statusPill" class="status idle">Loading</span></div>
+          <div id="previewStage" class="preview-stage ratio-1-1">
+            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Browser AI is loading</strong><span>Generation unlocks when the model is ready.</span></div>
+            <div id="video_container" class="engine-video hidden"></div>
+            <div id="progressState" class="progress-state">
               <div class="spinner"></div>
-              <strong id="progressTitle">Generating…</strong>
-              <span id="progressText">Preparing browser AI</span>
+              <strong id="progressTitle">Loading browser AI…</strong>
+              <span id="progressText">Checking GPU and loading model files</span>
               <div class="progress"><i id="progressBar"></i></div>
               <span id="progressPercent">0%</span>
             </div>
           </div>
 
           <div class="result-actions">
-            <a id="downloadBtn" class="primary disabled" href="#" download>Download MP4</a>
+            <button id="downloadBtn" class="primary disabled">Download WebM</button>
             <button id="copyPromptBtn" class="secondary">Copy prompt</button>
-            <button id="cancelBtn" class="secondary danger hidden">Cancel</button>
           </div>
 
           <div class="mini-stats">
             <div><span>Engine</span><strong id="statEngine">WebGPU</strong></div>
-            <div><span>Model</span><strong id="statModel">LCM Tiny SD</strong></div>
-            <div><span>Seed</span><strong id="statSeed">—</strong></div>
+            <div><span>Video</span><strong>8 AI frames</strong></div>
+            <div><span>Export</span><strong>WebM / frames</strong></div>
           </div>
         </aside>
       </div>
@@ -116,28 +89,51 @@
 
     <section id="historyView" class="view">
       <div class="section-page-head">
-        <div><p class="eyebrow">THIS SESSION</p><h1>Generation history</h1></div>
+        <div><p class="eyebrow">THIS SESSION</p><h1>Prompt history</h1></div>
         <button id="clearHistoryBtn" class="secondary danger">Clear history</button>
       </div>
       <div id="historyGrid" class="history-grid"></div>
     </section>
 
     <section id="setupView" class="view">
-      <div class="section-page-head"><div><p class="eyebrow">ZERO SETUP</p><h1>How VideoNova works</h1></div></div>
+      <div class="section-page-head"><div><p class="eyebrow">NO ACCOUNT · NO BACKEND</p><h1>What the browser needs</h1></div></div>
       <div class="setup-grid">
-        <article class="panel setup-card"><span class="setup-num">1</span><h2>Open this website</h2><p>There is no installer, login screen, API key, Python service, or separate backend. The published GitHub Pages site is the application.</p></article>
-        <article class="panel setup-card"><span class="setup-num">2</span><h2>Click Generate</h2><p>On first use the browser automatically downloads the public AI model files. They are cached by the browser so later loads can be faster.</p></article>
-        <article class="panel setup-card"><span class="setup-num">3</span><h2>Your GPU does the work</h2><p>WebGPU runs the diffusion model on the visitor's own compatible GPU. Chrome or Edge with hardware acceleration is recommended.</p></article>
-        <article class="panel setup-card"><span class="setup-num">4</span><h2>Download the MP4</h2><p>The generated frames are encoded in the browser with WebCodecs and returned as an MP4 Blob that can be previewed and downloaded immediately.</p></article>
+        <article class="panel setup-card"><span class="setup-num">1</span><h2>Chrome / Edge</h2><p>Use a current Chromium browser with hardware acceleration enabled. The engine requires WebGPU and the shader-f16 GPU feature.</p></article>
+        <article class="panel setup-card"><span class="setup-num">2</span><h2>Model download</h2><p>The first visit downloads public Stable Diffusion ONNX model files. This is a large download and is the main reason initial loading can take time.</p></article>
+        <article class="panel setup-card"><span class="setup-num">3</span><h2>Generation</h2><p>Text-to-Video Zero generates eight temporally linked frames on the visitor's GPU. No prompt is sent to a VideoNova server because there is no VideoNova backend.</p></article>
+        <article class="panel setup-card"><span class="setup-num">4</span><h2>Download</h2><p>After generation, the page animates the eight frames. Download WebM records that animation in your browser.</p></article>
       </div>
       <div class="panel compatibility-card">
-        <h2>Compatibility</h2>
-        <p>Video generation is compute-heavy. A modern desktop/laptop GPU and recent Chromium browser are strongly recommended. Low-memory devices may fail or be slow. This limitation comes from running the AI locally in the browser rather than using a cloud GPU.</p>
+        <h2>If Generate never enables</h2>
+        <p>Read the exact status shown on the Create page. If it says WebGPU unavailable or GPU F16 unsupported, that is a device/browser capability problem—not an internet error. If model download fails, reload once and check that large downloads from public model hosting are not blocked by your network.</p>
       </div>
     </section>
   </main>
 
-  <footer class="shell footer">VideoNova · browser-only AI video generation · no account · no API key · no backend</footer>
+  <footer class="shell footer">VideoNova · WebGPU Text-to-Video Zero · no account · no API key · no backend</footer>
+
+  <!-- Hidden DOM bridge required by the upstream Text-to-Video Zero browser runtime. -->
+  <div id="engineBridge" class="engine-bridge" aria-hidden="true">
+    <textarea id="user-input"></textarea>
+    <button id="send-button" type="button">Generate</button>
+    <div id="status"></div>
+    <canvas id="img_canvas_0"></canvas><canvas id="img_canvas_1"></canvas>
+    <canvas id="img_canvas_2"></canvas><canvas id="img_canvas_3"></canvas>
+    <canvas id="img_canvas_4"></canvas><canvas id="img_canvas_5"></canvas>
+    <canvas id="img_canvas_6"></canvas><canvas id="img_canvas_7"></canvas>
+  </div>
+
   <script src="./static/app.js"></script>
+  <script type="module">
+    try {
+      const { AutoTokenizer } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      window.AutoTokenizer = AutoTokenizer;
+      await import('https://cdn.jsdelivr.net/gh/WebGPU-Video-Diffusion/WebGPU-Video-Diffusion@fe2ecbae804d98f66cffd9e17381c201a4266f72/dist/main.js');
+      window.dispatchEvent(new CustomEvent('videonova-engine-script-loaded'));
+    } catch (error) {
+      console.error('VideoNova browser runtime load failed', error);
+      window.dispatchEvent(new CustomEvent('videonova-engine-load-error', { detail: String(error && (error.message || error)) }));
+    }
+  </script>
 </body>
 </html>
