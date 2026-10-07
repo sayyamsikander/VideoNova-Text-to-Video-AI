@@ -1,6 +1,6 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const SELFTEST_FALLBACK = SELFTEST_FALLBACK;
+const SELFTEST_FALLBACK = new URLSearchParams(location.search).get('selftest') === 'fallback';
 
 const state = {
   engineReady: false,
