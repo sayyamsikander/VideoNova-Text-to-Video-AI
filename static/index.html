@@ -3,34 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VideoNova — Self-Hosted Text to Video AI</title>
-  <meta name="description" content="Self-hosted text-to-video AI. No API key or third-party account required." />
+  <meta name="theme-color" content="#08090d" />
+  <title>VideoNova — Browser Text to Video AI</title>
+  <meta name="description" content="Generate AI videos directly in your browser with WebGPU. No account, API key, install, or backend." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div class="bg-orb orb-a"></div><div class="bg-orb orb-b"></div>
+
   <header class="topbar shell">
     <a class="brand" href="#create" aria-label="VideoNova home"><span class="logo">V</span><span>VideoNova</span></a>
     <nav>
       <button class="nav-btn active" data-view="create">Create</button>
       <button class="nav-btn" data-view="history">History</button>
-      <button class="nav-btn" data-view="setup">Setup</button>
+      <button class="nav-btn" data-view="setup">How it works</button>
     </nav>
-    <span id="providerBadge" class="badge">Checking local AI…</span>
+    <span id="providerBadge" class="badge">Checking browser GPU…</span>
   </header>
 
   <main class="shell">
     <section id="createView" class="view active">
       <div class="hero">
-        <p class="eyebrow">SELF-HOSTED TEXT → VIDEO</p>
-        <h1>Your AI. Your machine. Your videos.</h1>
-        <p>No API key, paid inference account, or third-party login. Video generation runs on your own GPU with an open-source model.</p>
+        <p class="eyebrow">100% BROWSER AI · NO ACCOUNT · NO BACKEND</p>
+        <h1>Turn text into video in your browser.</h1>
+        <p>Type a scene and click Generate. VideoNova downloads the public model automatically on first use, runs AI on your browser GPU, and returns a downloadable MP4.</p>
       </div>
 
       <div class="workspace">
         <section class="panel compose-panel">
-          <div class="section-head"><div><span class="step">01</span><h2>Describe your video</h2></div><button id="enhanceBtn" class="ghost">✨ Enhance prompt</button></div>
-          <textarea id="prompt" maxlength="4000" placeholder="Example: A cinematic drone shot gliding over a futuristic coastal city at sunrise, soft fog between glass towers, realistic reflections, slow elegant camera movement…"></textarea>
+          <div class="section-head">
+            <div><span class="step">01</span><h2>Describe your video</h2></div>
+            <button id="enhanceBtn" class="ghost">✨ Enhance prompt</button>
+          </div>
+
+          <textarea id="prompt" maxlength="4000" placeholder="Example: A cinematic drone shot gliding over a futuristic coastal city at sunrise, soft fog between glass towers, realistic reflections, smooth camera motion…"></textarea>
           <div class="textarea-meta"><span id="charCount">0 / 4000</span><button id="randomPromptBtn" class="text-btn">Try an example</button></div>
 
           <div class="preset-row" id="stylePresets">
@@ -42,43 +48,66 @@
           </div>
 
           <div class="grid settings-grid">
-            <label>Engine<select id="provider"><option value="local">Local AI — no account</option></select></label>
-            <label>Model<select id="model"></select></label>
-            <label>Aspect ratio<select id="aspect"><option>16:9</option><option>9:16</option><option>1:1</option></select></label>
-            <label>Quality<select id="quality"><option value="480p" selected>480p recommended</option><option value="720p">720p</option><option value="1080p">1080p</option></select></label>
-            <label>Duration<select id="duration"><option value="2">2 sec</option><option value="4" selected>4 sec</option><option value="6">6 sec</option><option value="8">8 sec</option></select></label>
-            <label>FPS<select id="fps"><option value="8">8</option><option value="16" selected>16</option><option value="24">24</option><option value="30">30</option></select></label>
+            <label>Engine
+              <select id="provider" disabled><option>Browser WebGPU</option></select>
+            </label>
+            <label>Model
+              <select id="model" disabled><option value="lcm-tiny-sd">LCM Tiny SD</option></select>
+            </label>
+            <label>Aspect ratio
+              <select id="aspect"><option>16:9</option><option>9:16</option><option>1:1</option></select>
+            </label>
+            <label>Resolution
+              <select id="quality" disabled><option>Browser optimized</option></select>
+            </label>
+            <label>Duration
+              <select id="duration"><option value="1">1 sec</option><option value="2" selected>2 sec</option><option value="3">3 sec</option></select>
+            </label>
+            <label>FPS
+              <select id="fps"><option value="8" selected>8</option><option value="12">12</option></select>
+            </label>
           </div>
 
           <details class="advanced">
             <summary>Advanced controls</summary>
             <div class="grid settings-grid advanced-grid">
-              <label class="wide">Negative prompt<textarea id="negativePrompt" rows="3" placeholder="blurry, low quality, distorted anatomy, flicker, artifacts"></textarea></label>
+              <label class="wide">Negative prompt<textarea id="negativePrompt" rows="3" placeholder="blurry, low quality, distorted, artifacts"></textarea></label>
               <label>Seed<div class="inline"><input id="seed" type="number" min="0" max="2147483647" placeholder="Random" /><button id="seedBtn" class="icon-btn" title="Randomize seed">↻</button></div></label>
-              <label>Steps<input id="steps" type="number" min="4" max="60" value="24" /></label>
-              <label>Guidance<input id="guidance" type="number" min="1" max="15" step="0.5" value="5" /></label>
+              <label>Steps<input id="steps" type="number" min="1" max="8" value="4" /></label>
+              <label>Guidance<input id="guidance" type="number" min="0" max="4" step="0.1" value="1" /></label>
             </div>
           </details>
 
+          <div class="browser-note">
+            <strong>First generation:</strong> model files download automatically and are cached by the browser. No signup or API key is requested.
+          </div>
           <div id="notice" class="notice hidden"></div>
-          <button id="generateBtn" class="primary large">Generate on my GPU <span>→</span></button>
+          <button id="generateBtn" class="primary large">Generate video <span>→</span></button>
         </section>
 
         <aside class="panel preview-panel">
           <div class="section-head"><div><span class="step">02</span><h2>Preview</h2></div><span id="statusPill" class="status idle">Ready</span></div>
           <div id="previewStage" class="preview-stage ratio-16-9">
-            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Your video will appear here</strong><span>Generated files stay on your machine.</span></div>
+            <div id="emptyState" class="empty-state"><div class="play-mark">▶</div><strong>Your video will appear here</strong><span>Nothing is uploaded from your prompt to a VideoNova backend.</span></div>
             <video id="video" controls playsinline class="hidden"></video>
-            <div id="progressState" class="progress-state hidden"><div class="spinner"></div><strong id="progressTitle">Generating…</strong><span id="progressText">Preparing local model</span><div class="progress"><i id="progressBar"></i></div><span id="progressPercent">0%</span></div>
+            <div id="progressState" class="progress-state hidden">
+              <div class="spinner"></div>
+              <strong id="progressTitle">Generating…</strong>
+              <span id="progressText">Preparing browser AI</span>
+              <div class="progress"><i id="progressBar"></i></div>
+              <span id="progressPercent">0%</span>
+            </div>
           </div>
+
           <div class="result-actions">
-            <a id="downloadBtn" class="primary disabled" href="#" download>Download video</a>
+            <a id="downloadBtn" class="primary disabled" href="#" download>Download MP4</a>
             <button id="copyPromptBtn" class="secondary">Copy prompt</button>
             <button id="cancelBtn" class="secondary danger hidden">Cancel</button>
           </div>
+
           <div class="mini-stats">
-            <div><span>Engine</span><strong id="statEngine">Self-hosted</strong></div>
-            <div><span>Model</span><strong id="statModel">—</strong></div>
+            <div><span>Engine</span><strong id="statEngine">WebGPU</strong></div>
+            <div><span>Model</span><strong id="statModel">LCM Tiny SD</strong></div>
             <div><span>Seed</span><strong id="statSeed">—</strong></div>
           </div>
         </aside>
@@ -86,26 +115,29 @@
     </section>
 
     <section id="historyView" class="view">
-      <div class="section-page-head"><div><p class="eyebrow">LOCAL LIBRARY</p><h1>Generation history</h1></div><button id="clearHistoryBtn" class="secondary danger">Clear history</button></div>
+      <div class="section-page-head">
+        <div><p class="eyebrow">THIS SESSION</p><h1>Generation history</h1></div>
+        <button id="clearHistoryBtn" class="secondary danger">Clear history</button>
+      </div>
       <div id="historyGrid" class="history-grid"></div>
     </section>
 
     <section id="setupView" class="view">
-      <div class="section-page-head"><div><p class="eyebrow">NO ACCOUNTS · NO API KEYS</p><h1>Run VideoNova yourself</h1></div></div>
+      <div class="section-page-head"><div><p class="eyebrow">ZERO SETUP</p><h1>How VideoNova works</h1></div></div>
       <div class="setup-grid">
-        <article class="panel setup-card"><span class="setup-num">1</span><h2>Install the local AI runtime</h2><p>Clone or download this repository on the computer that has your GPU, then install the included Python packages.</p><pre><code>python -m pip install -r requirements.txt</code></pre><p class="muted">An NVIDIA GPU with roughly 11GB+ VRAM is the practical target for the default Wan 2.1 1.3B model. Apple Silicon can also be attempted through MPS.</p></article>
-        <article class="panel setup-card"><span class="setup-num">2</span><h2>Download the open model</h2><p>No account or token is needed. Download the public model once; it is saved in <code>models/</code> and future generations use the local files.</p><pre><code>python download_model.py</code></pre><p class="muted">Automatic first-run download is enabled by default. You can disable it in <code>.env</code> after the model is present.</p></article>
-        <article class="panel setup-card"><span class="setup-num">3</span><h2>Start your own generator</h2><p>Run the included launcher. The website and AI backend are served from the same computer.</p><pre><code># Windows
-start.bat
-
-# Linux / macOS
-bash start.sh</code></pre><p>Open <code>http://127.0.0.1:8080</code>. No external account is connected.</p></article>
-        <article class="panel setup-card"><span class="setup-num">4</span><h2>About GitHub Pages</h2><p>The GitHub Pages address can display the interface, but GitHub Pages does not provide a GPU or execute Python. For generation, open the local URL above or host this same repo on a GPU machine you own.</p><p class="muted">The AI itself runs in <code>server.py</code> using the local open-source model files.</p></article>
+        <article class="panel setup-card"><span class="setup-num">1</span><h2>Open this website</h2><p>There is no installer, login screen, API key, Python service, or separate backend. The published GitHub Pages site is the application.</p></article>
+        <article class="panel setup-card"><span class="setup-num">2</span><h2>Click Generate</h2><p>On first use the browser automatically downloads the public AI model files. They are cached by the browser so later loads can be faster.</p></article>
+        <article class="panel setup-card"><span class="setup-num">3</span><h2>Your GPU does the work</h2><p>WebGPU runs the diffusion model on the visitor's own compatible GPU. Chrome or Edge with hardware acceleration is recommended.</p></article>
+        <article class="panel setup-card"><span class="setup-num">4</span><h2>Download the MP4</h2><p>The generated frames are encoded in the browser with WebCodecs and returned as an MP4 Blob that can be previewed and downloaded immediately.</p></article>
+      </div>
+      <div class="panel compatibility-card">
+        <h2>Compatibility</h2>
+        <p>Video generation is compute-heavy. A modern desktop/laptop GPU and recent Chromium browser are strongly recommended. Low-memory devices may fail or be slow. This limitation comes from running the AI locally in the browser rather than using a cloud GPU.</p>
       </div>
     </section>
   </main>
 
-  <footer class="shell footer">VideoNova · self-hosted text-to-video · no API key · no third-party account</footer>
+  <footer class="shell footer">VideoNova · browser-only AI video generation · no account · no API key · no backend</footer>
   <script src="./app.js"></script>
 </body>
 </html>
