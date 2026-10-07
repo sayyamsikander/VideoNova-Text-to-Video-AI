@@ -4,8 +4,11 @@ const IS_GITHUB_PAGES = location.hostname.endsWith('.github.io');
 const API_BASE = (localStorage.getItem('videonova-api-base') || '').replace(/\/+$/, '');
 const apiUrl = (path) => `${API_BASE}${path}`;
 const backendAssetUrl = (path) => !path ? path : (/^https?:\/\//i.test(path) ? path : `${API_BASE}${path}`);
+const HF_SESSION_KEY = 'videonova-hf-token';
+const getBrowserToken = () => sessionStorage.getItem(HF_SESSION_KEY) || '';
+const usingBrowserHF = () => IS_GITHUB_PAGES && !API_BASE && !!getBrowserToken();
 
-const state = { config: null, currentJob: null, poller: null, history: JSON.parse(localStorage.getItem('videonova-history') || '[]') };
+const state = { config: null, currentJob: null, poller: null, browserCancelled: false, activeObjectUrl: null, history: JSON.parse(localStorage.getItem('videonova-history') || '[]') };
 const examples = [
   'A cinematic aerial shot gliding over emerald rice terraces after rain, morning mist drifting between hills, tiny farmers walking along the paths, realistic light, slow graceful camera movement.',
   'A tiny orange robot explores an abandoned moon base, dust floating in zero gravity, wide-angle lens, dramatic blue rim light, detailed sci-fi surfaces, gentle handheld movement.',
@@ -31,11 +34,14 @@ $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 async function loadConfig(){
   try{
     if(IS_GITHUB_PAGES && !API_BASE){
-      state.config={hf:{configured:false,models:['Wan-AI/Wan2.1-T2V-1.3B']},comfyui:{configured:false}};
-      $('#providerBadge').textContent='Frontend ready · backend needed';
-      $('#providerBadge').style.color='#ffcf70';
+      const hasToken=!!getBrowserToken();
+      state.config={hf:{configured:hasToken,models:['Wan-AI/Wan2.2-TI2V-5B','tencent/HunyuanVideo','Lightricks/LTX-Video-0.9.8-13B-distilled']},comfyui:{configured:false}};
+      $('#provider').value='hf';
+      $('#provider').querySelector('option[value="comfyui"]').disabled=true;
+      $('#providerBadge').textContent=hasToken?'HF browser mode ready':'Add HF token in Setup';
+      $('#providerBadge').style.color=hasToken?'#9ce7c3':'#ffcf70';
       updateModels();
-      showNotice('The GitHub Pages frontend is working. To generate videos, deploy server.py on a backend host, then open Setup and save its HTTPS URL.');
+      if(!hasToken) showNotice('GitHub Pages is loaded correctly. Open Setup, add a Hugging Face token, then Generate will work directly in this browser tab.');
       return;
     }
     const r=await fetch(apiUrl('/api/config')); 
@@ -110,11 +116,97 @@ $('#generateBtn').onclick=async()=>{
   setGenerating(true); $('#progressTitle').textContent='Generating your video…';
   $('#statEngine').textContent=payload.provider==='hf'?'Hugging Face':'ComfyUI'; $('#statModel').textContent=$('#model').options[$('#model').selectedIndex]?.textContent||'Workflow'; $('#statSeed').textContent=payload.seed??'random';
   try{
+    if(IS_GITHUB_PAGES && !API_BASE){
+      await runBrowserHf(payload);
+      return;
+    }
     const r=await fetch(apiUrl('/api/generate'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await r.json();
     if(!r.ok) throw new Error(data.error||'Generation request failed');
     state.currentJob=data.jobId; pollJob(data.jobId,payload);
   }catch(e){generationError(e.message)}
 };
+
+async function runBrowserHf(payload){
+  const token=getBrowserToken();
+  if(!token){ setGenerating(false); showNotice('Open Setup and add your Hugging Face token first.'); showView('setup'); return; }
+  state.currentJob='browser-hf';
+  state.browserCancelled=false;
+  $('#progressText').textContent='Loading Hugging Face client…';
+  $('#progressBar').style.width='8%';
+  $('#progressPercent').textContent='8%';
+
+  let fakeProgress=8;
+  const ticker=setInterval(()=>{
+    if(fakeProgress<88 && !state.browserCancelled){
+      fakeProgress += fakeProgress<45 ? 3 : 1;
+      $('#progressBar').style.width=`${fakeProgress}%`;
+      $('#progressPercent').textContent=`${fakeProgress}%`;
+      $('#progressText').textContent=fakeProgress<30?'Submitting to Hugging Face…':fakeProgress<70?'Generating frames…':'Finalizing video…';
+    }
+  },1800);
+
+  try{
+    const mod=await import('https://esm.sh/@huggingface/inference@4.13.30');
+    const client=new mod.InferenceClient(token);
+    const seed=payload.seed ?? Math.floor(Math.random()*2147483647);
+    const frames=Math.min(161,Math.max(33,payload.duration*payload.fps+1));
+    const parameters={
+      seed,
+      num_frames:frames,
+      num_inference_steps:payload.steps,
+      guidance_scale:payload.guidance
+    };
+    if(payload.negativePrompt) parameters.negative_prompt=[payload.negativePrompt];
+
+    const videoBlob=await client.textToVideo({
+      model:payload.model || 'Wan-AI/Wan2.2-TI2V-5B',
+      provider:'fal-ai',
+      inputs:payload.prompt,
+      parameters
+    });
+
+    if(state.browserCancelled){ clearInterval(ticker); setGenerating(false); return; }
+    if(!(videoBlob instanceof Blob) || !videoBlob.size) throw new Error('Hugging Face returned an empty video.');
+
+    clearInterval(ticker);
+    if(state.activeObjectUrl) URL.revokeObjectURL(state.activeObjectUrl);
+    const objectUrl=URL.createObjectURL(videoBlob);
+    state.activeObjectUrl=objectUrl;
+    state.currentJob=null;
+    setGenerating(false);
+    $('#progressState').classList.add('hidden');
+    $('#video').src=objectUrl;
+    $('#video').classList.remove('hidden');
+    $('#video').load();
+    $('#downloadBtn').href=objectUrl;
+    $('#downloadBtn').download=`videonova-${Date.now()}.mp4`;
+    $('#downloadBtn').classList.remove('disabled');
+    $('#statusPill').className='status complete';
+    $('#statusPill').textContent='Ready';
+    $('#statSeed').textContent=seed;
+    $('#statModel').textContent=(payload.model||'Wan2.2-TI2V-5B').split('/').pop();
+    $('#progressBar').style.width='100%';
+    $('#progressPercent').textContent='100%';
+    addHistory({
+      id:`browser-${Date.now()}`,
+      createdAt:Date.now(),
+      prompt:payload.prompt,
+      videoUrl:objectUrl,
+      downloadUrl:objectUrl,
+      provider:'hf-browser',
+      model:payload.model,
+      seed,
+      ephemeral:true,
+      settings:{aspect:payload.aspect,quality:payload.quality,duration:payload.duration,fps:payload.fps}
+    });
+  }catch(e){
+    clearInterval(ticker);
+    const msg=String(e?.message||e);
+    if(/401|unauthorized|token/i.test(msg)) throw new Error('Hugging Face rejected the token. Create a token with Inference Providers permission, then save it again in Setup.');
+    if(/402|payment|credit|quota|balance/i.test(msg)) throw new Error('Hugging Face credits/quota are not available for this request. Check your Inference Providers balance or try another supported model.');
+    throw e;
+  }
+}
 
 function pollJob(id,payload){
   clearInterval(state.poller);
@@ -135,19 +227,46 @@ function pollJob(id,payload){
 }
 
 function generationError(msg){setGenerating(false);$('#progressState').classList.add('hidden');$('#emptyState').classList.remove('hidden');$('#statusPill').className='status error';$('#statusPill').textContent='Error';showNotice(msg)}
-$('#cancelBtn').onclick=async()=>{if(!state.currentJob)return;await fetch(apiUrl(`/api/jobs/${state.currentJob}/cancel`),{method:'POST'}).catch(()=>{});};
+$('#cancelBtn').onclick=async()=>{
+  if(!state.currentJob)return;
+  if(state.currentJob==='browser-hf'){
+    state.browserCancelled=true;
+    state.currentJob=null;
+    setGenerating(false);
+    $('#progressState').classList.add('hidden');
+    $('#emptyState').classList.remove('hidden');
+    $('#statusPill').textContent='Cancelled';
+    return;
+  }
+  await fetch(apiUrl(`/api/jobs/${state.currentJob}/cancel`),{method:'POST'}).catch(()=>{});
+};
 
 function addHistory(job){
-  state.history=[{id:job.id,createdAt:job.createdAt||Date.now(),prompt:job.prompt,videoUrl:job.videoUrl,downloadUrl:job.downloadUrl,provider:job.provider,model:job.model||'',seed:job.seed??'',settings:job.settings||{}},...state.history.filter(x=>x.id!==job.id)].slice(0,30);
-  localStorage.setItem('videonova-history',JSON.stringify(state.history));
+  state.history=[{id:job.id,createdAt:job.createdAt||Date.now(),prompt:job.prompt,videoUrl:job.videoUrl,downloadUrl:job.downloadUrl,provider:job.provider,model:job.model||'',seed:job.seed??'',ephemeral:!!job.ephemeral,settings:job.settings||{}},...state.history.filter(x=>x.id!==job.id)].slice(0,30);
+  const persistent=state.history.filter(x=>!x.ephemeral && !String(x.videoUrl||'').startsWith('blob:'));
+  localStorage.setItem('videonova-history',JSON.stringify(persistent));
 }
 function escapeHtml(s=''){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function renderHistory(){
   const grid=$('#historyGrid'); if(!state.history.length){grid.innerHTML='<div class="history-empty">No generated videos yet. Create your first clip and it will appear here.</div>';return}
-  grid.innerHTML=state.history.map(item=>`<article class="panel history-card"><div class="history-thumb"><video src="${backendAssetUrl(item.videoUrl)}" muted preload="metadata" controls></video></div><p>${escapeHtml(item.prompt)}</p><div class="history-meta"><span>${item.provider==='comfyui'?'ComfyUI':'Hugging Face'}</span><span>${new Date(item.createdAt).toLocaleString()}</span></div><div class="history-actions"><a class="primary" href="${backendAssetUrl(item.downloadUrl)}" download>Download</a><button class="secondary reuse" data-id="${item.id}">Reuse</button></div></article>`).join('');
+  grid.innerHTML=state.history.map(item=>`<article class="panel history-card"><div class="history-thumb"><video src="${backendAssetUrl(item.videoUrl)}" muted preload="metadata" controls></video></div><p>${escapeHtml(item.prompt)}</p><div class="history-meta"><span>${item.provider==='comfyui'?'ComfyUI':item.provider==='hf-browser'?'HF Browser':'Hugging Face'}</span><span>${new Date(item.createdAt).toLocaleString()}</span></div><div class="history-actions"><a class="primary" href="${backendAssetUrl(item.downloadUrl)}" download>Download</a><button class="secondary reuse" data-id="${item.id}">Reuse</button></div></article>`).join('');
   $$('.reuse').forEach(b=>b.onclick=()=>{const item=state.history.find(x=>x.id===b.dataset.id);if(!item)return;$('#prompt').value=item.prompt;$('#prompt').dispatchEvent(new Event('input'));showView('create')});
 }
 $('#clearHistoryBtn').onclick=()=>{state.history=[];localStorage.removeItem('videonova-history');renderHistory()};
+
+const hfTokenInput=$('#hfBrowserToken');
+const hfTokenState=$('#hfTokenState');
+if(hfTokenState) hfTokenState.textContent=getBrowserToken()?'Token active for this tab.':'No browser token saved.';
+const saveHfTokenBtn=$('#saveHfTokenBtn');
+if(saveHfTokenBtn) saveHfTokenBtn.onclick=()=>{
+  const token=(hfTokenInput?.value||'').trim();
+  if(!token.startsWith('hf_')){ if(hfTokenState) hfTokenState.textContent='Enter a valid Hugging Face token beginning with hf_.'; return; }
+  sessionStorage.setItem(HF_SESSION_KEY,token);
+  if(hfTokenInput) hfTokenInput.value='';
+  location.reload();
+};
+const clearHfTokenBtn=$('#clearHfTokenBtn');
+if(clearHfTokenBtn) clearHfTokenBtn.onclick=()=>{sessionStorage.removeItem(HF_SESSION_KEY);location.reload();};
 
 const backendInput=$('#backendUrl');
 if(backendInput) backendInput.value=API_BASE;
