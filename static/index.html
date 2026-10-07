@@ -129,14 +129,44 @@
     try {
       window.loading = null;
       if (location.search) history.replaceState(null, document.title, location.pathname + location.hash);
-      const { AutoTokenizer } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
-      window.AutoTokenizer = AutoTokenizer;
-      await import('https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/dist/main.js');
-      window.dispatchEvent(new CustomEvent('videonova-engine-script-loaded'));
-      if (document.readyState !== 'loading') document.dispatchEvent(new Event('DOMContentLoaded'));
+
+      if (!navigator.gpu) {
+        window.dispatchEvent(new CustomEvent('videonova-engine-capability-error', {
+          detail: 'WebGPU is unavailable. Use a recent Chrome or Edge browser with hardware acceleration enabled.'
+        }));
+      } else {
+        const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+        if (!adapter) {
+          window.dispatchEvent(new CustomEvent('videonova-engine-capability-error', {
+            detail: 'No compatible WebGPU adapter was found. Check browser hardware acceleration and GPU drivers.'
+          }));
+        } else if (!adapter.features.has('shader-f16')) {
+          window.dispatchEvent(new CustomEvent('videonova-engine-capability-error', {
+            detail: 'Your GPU/WebGPU adapter does not support shader-f16, which this browser video model requires.'
+          }));
+        } else {
+          try {
+            const { AutoTokenizer } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+            window.AutoTokenizer = AutoTokenizer;
+          } catch (error) {
+            throw new Error('Tokenizer runtime failed to load: ' + String(error && (error.message || error)));
+          }
+
+          try {
+            await import('https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/dist/main.js');
+          } catch (error) {
+            throw new Error('Text-to-video WebGPU runtime failed to load: ' + String(error && (error.message || error)));
+          }
+
+          window.dispatchEvent(new CustomEvent('videonova-engine-script-loaded'));
+          if (document.readyState !== 'loading') document.dispatchEvent(new Event('DOMContentLoaded'));
+        }
+      }
     } catch (error) {
       console.error('VideoNova browser runtime load failed', error);
-      window.dispatchEvent(new CustomEvent('videonova-engine-load-error', { detail: String(error && (error.message || error)) }));
+      window.dispatchEvent(new CustomEvent('videonova-engine-load-error', {
+        detail: String(error && (error.message || error))
+      }));
     }
   </script>
 </body>
