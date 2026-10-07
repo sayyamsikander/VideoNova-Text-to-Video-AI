@@ -55,11 +55,14 @@ def get_job(job_id):
         job = JOBS.get(job_id)
         return dict(job) if job else None
 
+def model_present():
+    return MODEL_PATH.exists() and (MODEL_PATH / "model_index.json").exists()
+
 def local_status():
     status = {
         "engine": "local-wan",
-        "model": MODEL_PATH.name if MODEL_PATH.exists() else MODEL_ID,
-        "modelPresent": MODEL_PATH.exists(),
+        "model": MODEL_PATH.name if model_present() else MODEL_ID,
+        "modelPresent": model_present(),
         "autoDownload": AUTO_DOWNLOAD,
         "device": "unknown",
         "torchInstalled": False,
@@ -85,7 +88,13 @@ def local_status():
         status["diffusersInstalled"] = True
     except Exception:
         pass
-    status["ready"] = bool(status["torchInstalled"] and status["diffusersInstalled"] and (status["modelPresent"] or AUTO_DOWNLOAD))
+    status["gpuDetected"] = status["device"] in {"cuda", "mps", "xpu"}
+    status["ready"] = bool(
+        status["torchInstalled"]
+        and status["diffusersInstalled"]
+        and status["gpuDetected"]
+        and (status["modelPresent"] or AUTO_DOWNLOAD)
+    )
     return status
 
 def build_dimensions(aspect: str, quality: str):
@@ -98,7 +107,7 @@ def build_dimensions(aspect: str, quality: str):
     return presets.get(quality, presets["480p"]).get(aspect, (832, 480))
 
 def download_model_if_needed(job_id=None):
-    if MODEL_PATH.exists() and (MODEL_PATH / "model_index.json").exists():
+    if model_present():
         return
     if not AUTO_DOWNLOAD:
         raise RuntimeError(
