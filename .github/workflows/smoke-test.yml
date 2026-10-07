@@ -70,21 +70,21 @@ jobs:
 
       - name: Run universal fallback end-to-end
         run: |
+          set -euxo pipefail
           python3 -m http.server 8001 >/tmp/videonova-fallback-http.log 2>&1 &
           SERVER_PID=$!
-          trap 'kill $SERVER_PID || true' EXIT
-          sleep 2
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           "$CHROME" \
             --headless=new \
             --no-sandbox \
             --disable-dev-shm-usage \
             --autoplay-policy=no-user-gesture-required \
-            --virtual-time-budget=9000 \
-            --dump-dom \
-            "http://127.0.0.1:8001/?selftest=fallback" > /tmp/fallback-dom.html
-          grep -q 'data-videonova-selftest="pass"' /tmp/fallback-dom.html
-          grep -q 'data-videonova-blob-size="' /tmp/fallback-dom.html
+            --remote-debugging-port=9222 \
+            --user-data-dir=/tmp/videonova-chrome-profile \
+            "http://127.0.0.1:8001/?selftest=fallback" >/tmp/videonova-chrome.log 2>&1 &
+          CHROME_PID=$!
+          trap 'kill $CHROME_PID $SERVER_PID || true' EXIT
+          node .github/scripts/browser-fallback-test.mjs
           echo "Universal fallback generated a recorded browser video"
 
       - name: Check deployed GitHub Pages
