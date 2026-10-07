@@ -123,6 +123,8 @@ function syncEngineStatus(){
 
   if(/\bready\./i.test(text) && !state.generating){
     state.engineReady=true;
+    $('#progressState').classList.add('hidden');
+    $('#emptyState').classList.remove('hidden');
     $('#generateBtn').disabled=false;
     $('#providerBadge').textContent='Browser AI ready';
     $('#providerBadge').style.color='#9ce7c3';
