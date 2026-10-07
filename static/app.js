@@ -1,5 +1,6 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+const SELFTEST_FALLBACK = SELFTEST_FALLBACK;
 
 const state = {
   engineReady: false,
@@ -491,7 +492,7 @@ async function runCompatibilityVideo(prompt) {
   setStatus('Ready', 'complete');
   addHistory({prompt, createdAt: Date.now(), mode: 'Universal mode'});
   showNotice('Video created successfully in Universal mode. Click Download Video to save it.', 'success');
-  if (new URLSearchParams(location.search).get('selftest') === 'fallback') {
+  if (SELFTEST_FALLBACK) {
     document.documentElement.dataset.videonovaSelftest = blob.size > 1000 ? 'pass' : 'fail';
     document.documentElement.dataset.videonovaBlobSize = String(blob.size);
   }
@@ -576,8 +577,7 @@ checkBrowser();
 initStatusObserver();
 renderHistory();
 
-const selftestParams = new URLSearchParams(location.search);
-if (selftestParams.get('selftest') === 'fallback') {
+if (SELFTEST_FALLBACK) {
   document.documentElement.dataset.videonovaSelftest = 'running';
   state.engineReady = false;
   state.runtimeFailed = true;
