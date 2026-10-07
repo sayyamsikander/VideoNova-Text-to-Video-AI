@@ -16,6 +16,19 @@ A complete, responsive text-to-video web app starter with:
 - Responsive desktop/mobile UI
 - Server-side secrets (tokens are not exposed to the browser)
 
+## GitHub Pages — working static mode
+
+The published GitHub Pages frontend can generate video directly from the browser:
+
+1. Open the site and choose **Setup**.
+2. Paste a Hugging Face token that has **Inference Providers** permission.
+3. Click **Use token**.
+4. Return to **Create**, enter a prompt, and generate.
+
+The token is kept in `sessionStorage` for the current browser tab only; it is not committed to GitHub. This is suitable for personal testing. For a public production app, use the Python backend/proxy so a personal token is not exposed to browser JavaScript.
+
+Live site: `https://sayyamsikander.github.io/VideoNova-Text-to-Video-AI/`
+
 ## Option 1 — Online generation with Hugging Face
 
 Requirements: Python 3.10+.
@@ -44,7 +57,7 @@ Open: `http://127.0.0.1:8080`
 
 The default model list includes:
 
-- `Wan-AI/Wan2.1-T2V-1.3B`
+- `Wan-AI/Wan2.2-TI2V-5B`
 - `tencent/HunyuanVideo`
 - `Lightricks/LTX-Video-0.9.8-13B-distilled`
 
