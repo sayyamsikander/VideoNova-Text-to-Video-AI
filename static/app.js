@@ -8,7 +8,7 @@ const HF_SESSION_KEY = 'videonova-hf-token';
 const getBrowserToken = () => sessionStorage.getItem(HF_SESSION_KEY) || '';
 const usingBrowserHF = () => IS_GITHUB_PAGES && !API_BASE && !!getBrowserToken();
 
-const state = { config: null, currentJob: null, poller: null, browserCancelled: false, activeObjectUrl: null, history: JSON.parse(localStorage.getItem('videonova-history') || '[]') };
+const state = { config: null, currentJob: null, poller: null, browserCancelled: false, backendOffline: false, activeObjectUrl: null, history: JSON.parse(localStorage.getItem('videonova-history') || '[]') };
 const examples = [
   'A cinematic aerial shot gliding over emerald rice terraces after rain, morning mist drifting between hills, tiny farmers walking along the paths, realistic light, slow graceful camera movement.',
   'A tiny orange robot explores an abandoned moon base, dust floating in zero gravity, wide-angle lens, dramatic blue rim light, detailed sci-fi surfaces, gentle handheld movement.',
@@ -58,6 +58,7 @@ async function loadConfig(){
     if(!ready.length) showNotice('No generation engine is configured yet. Open Setup for instructions.');
   }catch(e){
     if(IS_GITHUB_PAGES && API_BASE){
+      state.backendOffline=true;
       const hasToken=!!getBrowserToken();
       state.config={hf:{configured:hasToken,models:['Wan-AI/Wan2.2-TI2V-5B','tencent/HunyuanVideo','Lightricks/LTX-Video-0.9.8-13B-distilled']},comfyui:{configured:false}};
       $('#provider').value='hf';
@@ -129,7 +130,7 @@ $('#generateBtn').onclick=async()=>{
   setGenerating(true); $('#progressTitle').textContent='Generating your video…';
   $('#statEngine').textContent=payload.provider==='hf'?'Hugging Face':'ComfyUI'; $('#statModel').textContent=$('#model').options[$('#model').selectedIndex]?.textContent||'Workflow'; $('#statSeed').textContent=payload.seed??'random';
   try{
-    if(IS_GITHUB_PAGES && !API_BASE){
+    if(IS_GITHUB_PAGES && (!API_BASE || state.backendOffline)){
       await runBrowserHf(payload);
       return;
     }
