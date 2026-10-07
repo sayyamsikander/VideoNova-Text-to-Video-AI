@@ -1,113 +1,81 @@
-# VideoNova — Self-Hosted Text-to-Video AI
+# VideoNova — Browser Text-to-Video AI
 
-VideoNova is a self-hosted text-to-video website. Generation runs on your own GPU with the open-source Wan 2.1 1.3B model.
+VideoNova is a **static GitHub Pages text-to-video app**. It runs AI generation in the visitor's browser using WebGPU/WebNN and creates an MP4 with WebCodecs.
 
-**No API key. No hosted inference account. No Hugging Face login. No ComfyUI connection.**
+**No account. No API key. No Python. No backend. No local install.**
 
-## What is included
+## Live site
 
-- Text-to-video generation on your own hardware
-- Prompt and negative prompt
-- Cinematic / anime / photoreal / product / fantasy prompt presets
-- 16:9, 9:16 and 1:1 output
-- 480p, 720p and 1080p controls
-- Duration, FPS, seed, steps and guidance controls
-- Generation status
-- Video preview
-- MP4 download
-- Local browser history
-- Responsive UI
-- Automatic anonymous download of the public model on first use
-- Manual model downloader for offline reuse
+https://sayyamsikander.github.io/VideoNova-Text-to-Video-AI/
+
+## How it works
+
+1. Open the GitHub Pages website.
+2. Enter a text prompt.
+3. Click **Generate video**.
+4. On first use, the browser automatically downloads the public model files and caches them.
+5. Diffusion generation runs on the visitor's own compatible GPU.
+6. Frames are encoded to MP4 in the browser.
+7. Preview or download the video.
+
+There is no VideoNova generation server and there are no user credentials.
+
+## Browser AI engine
+
+The site uses the MIT-licensed `@seanhogg/builderforce-studio` browser video engine. VideoNova calls it with:
+
+- `apiKey: ''`
+- `weightSources: ['huggingface-cdn']`
+- `skipPromptExpansion: true`
+
+This disables the engine's optional hosted prompt-expansion path and loads public model weights anonymously.
+
+The default model is the browser-friendly `lcm-tiny-sd` profile. The engine generates temporally coherent frames in-browser and muxes them into an MP4.
 
 ## Requirements
 
-- Python 3.10+
-- A supported GPU
-- NVIDIA CUDA is recommended
-- Apple Silicon / MPS can be attempted
-- About 11GB+ VRAM is the practical target for the default Wan 2.1 1.3B model
-- Enough disk space for the model files and generated videos
+A visitor does not need to install anything, but their browser/device must be capable of running browser AI:
 
-CPU-only video generation is intentionally disabled because it is not practical for this model.
+- HTTPS (GitHub Pages already provides it)
+- Recent Chrome or Edge recommended
+- WebGPU-capable GPU and enabled hardware acceleration
+- WebCodecs support for MP4 output
+- Sufficient browser/GPU memory
+- Internet connection for the first model download
 
-## Fast start
-
-### Windows
-
-```bat
-start.bat
-```
-
-### Linux / macOS
-
-```bash
-bash start.sh
-```
-
-Then open:
-
-```text
-http://127.0.0.1:8080
-```
-
-The first generation can automatically download the public model anonymously. No account or token is used.
-
-## Download the model before starting
-
-If you prefer to download it once before using the website:
-
-```bash
-python -m pip install -r requirements.txt
-python download_model.py
-python server.py
-```
-
-The model is stored at:
-
-```text
-models/Wan2.1-T2V-1.3B-Diffusers/
-```
-
-The `models/` folder is ignored by Git so the large weights are not uploaded to your repository.
-
-## Configuration
-
-Copy the example environment file if you want custom settings:
-
-```bash
-cp .env.example .env
-```
-
-Default configuration:
-
-```env
-HOST=127.0.0.1
-PORT=8080
-VIDEONOVA_MODEL_ID=Wan-AI/Wan2.1-T2V-1.3B-Diffusers
-VIDEONOVA_MODEL_PATH=./models/Wan2.1-T2V-1.3B-Diffusers
-VIDEONOVA_AUTO_DOWNLOAD=true
-VIDEONOVA_DEVICE=
-```
-
-Set `VIDEONOVA_DEVICE=cuda` or `mps` only if automatic detection does not choose correctly.
-
-## GitHub Pages
-
-The GitHub Pages URL is a **static preview only**. GitHub Pages cannot run Python or provide the GPU compute required by a video diffusion model.
-
-For the real generator, run this repository on your own GPU computer and use `http://127.0.0.1:8080`.
-
-If you own a public GPU server, you can run the same repository there under your own domain. No external inference account is required.
+The first generation is slower because the model must download and initialize. Model files are cached by the browser for later use when storage is available.
 
 ## Privacy
 
-Prompts and generated videos are handled by your local VideoNova process. Generated MP4 files are written to `outputs/`. The repository ignores model weights, generated outputs, virtual environments and `.env` files.
+The prompt is used by the model running in the browser. VideoNova has no backend that receives prompts or videos.
 
-## Default AI model
+Public model/runtime files are downloaded from their public distribution locations. No account or API key is required.
 
-The default model is `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` using Diffusers' `WanPipeline`. It is downloaded anonymously as a public model and then loaded from local files for generation.
+## Features
 
-## License
+- Text-to-video generation
+- Browser WebGPU/WebNN execution
+- MP4 output
+- 16:9, 9:16 and 1:1
+- Duration and FPS controls
+- Negative prompt
+- Seed
+- Steps and guidance
+- Prompt style presets
+- Live progress
+- Cancel generation
+- Video preview
+- MP4 download
+- Session history
+- Responsive GitHub Pages UI
 
-VideoNova source code is provided under the MIT license in this repository. The included/default AI model has its own upstream license; review the model's license before redistribution or commercial deployment.
+## Important limitation
+
+GitHub Pages itself supplies only the static HTML/CSS/JavaScript. The heavy AI computation happens on the visitor's GPU through WebGPU. Older browsers, low-memory devices, and some phones may not be able to generate video.
+
+## Credits and licenses
+
+- VideoNova UI/source: MIT
+- Browser video engine: `@seanhogg/builderforce-studio`, MIT
+- ONNX Runtime Web / Transformers.js and model assets retain their own licenses
+- The public model files are downloaded at runtime and are not copied into this Git repository
