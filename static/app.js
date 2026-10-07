@@ -1,5 +1,9 @@
 const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
+const $ = (s) => [...document.querySelectorAll(s)];
+const IS_GITHUB_PAGES = location.hostname.endsWith('.github.io');
+const API_BASE = (localStorage.getItem('videonova-api-base') || '').replace(/\/+$/, '');
+const apiUrl = (path) => `${API_BASE}${path}`;
+const backendAssetUrl = (path) => !path ? path : (/^https?:\/\//i.test(path) ? path : `${API_BASE}${path}`);
 
 const state = { config: null, currentJob: null, poller: null, history: JSON.parse(localStorage.getItem('videonova-history') || '[]') };
 const examples = [
@@ -26,7 +30,17 @@ $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 
 async function loadConfig(){
   try{
-    const r=await fetch('/api/config'); state.config=await r.json();
+    if(IS_GITHUB_PAGES && !API_BASE){
+      state.config={hf:{configured:false,models:['Wan-AI/Wan2.1-T2V-1.3B']},comfyui:{configured:false}};
+      $('#providerBadge').textContent='Frontend ready · backend needed';
+      $('#providerBadge').style.color='#ffcf70';
+      updateModels();
+      showNotice('The GitHub Pages frontend is working. To generate videos, deploy server.py on a backend host, then open Setup and save its HTTPS URL.');
+      return;
+    }
+    const r=await fetch(apiUrl('/api/config')); 
+    if(!r.ok) throw new Error(`Backend returned HTTP ${r.status}`);
+    state.config=await r.json();
     const badge=$('#providerBadge');
     const ready=[]; if(state.config.hf.configured) ready.push('HF'); if(state.config.comfyui.configured) ready.push('ComfyUI');
     badge.textContent=ready.length?`${ready.join(' + ')} ready`:'Setup required';
@@ -96,7 +110,7 @@ $('#generateBtn').onclick=async()=>{
   setGenerating(true); $('#progressTitle').textContent='Generating your video…';
   $('#statEngine').textContent=payload.provider==='hf'?'Hugging Face':'ComfyUI'; $('#statModel').textContent=$('#model').options[$('#model').selectedIndex]?.textContent||'Workflow'; $('#statSeed').textContent=payload.seed??'random';
   try{
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await r.json();
+    const r=await fetch(apiUrl('/api/generate'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await r.json();
     if(!r.ok) throw new Error(data.error||'Generation request failed');
     state.currentJob=data.jobId; pollJob(data.jobId,payload);
   }catch(e){generationError(e.message)}
@@ -106,11 +120,11 @@ function pollJob(id,payload){
   clearInterval(state.poller);
   const tick=async()=>{
     try{
-      const r=await fetch(`/api/jobs/${id}`); const job=await r.json(); if(!r.ok) throw new Error(job.error||'Job lookup failed'); renderProgress(job);
+      const r=await fetch(apiUrl(`/api/jobs/${id}`)); const job=await r.json(); if(!r.ok) throw new Error(job.error||'Job lookup failed'); renderProgress(job);
       if(job.status==='complete'){
         clearInterval(state.poller); state.poller=null; state.currentJob=null; setGenerating(false);
-        $('#progressState').classList.add('hidden'); $('#video').src=job.videoUrl; $('#video').classList.remove('hidden'); $('#video').load();
-        $('#downloadBtn').href=job.downloadUrl; $('#downloadBtn').classList.remove('disabled'); $('#statusPill').className='status complete'; $('#statusPill').textContent='Ready';
+        $('#progressState').classList.add('hidden'); $('#video').src=backendAssetUrl(job.videoUrl); $('#video').classList.remove('hidden'); $('#video').load();
+        $('#downloadBtn').href=backendAssetUrl(job.downloadUrl); $('#downloadBtn').classList.remove('disabled'); $('#statusPill').className='status complete'; $('#statusPill').textContent='Ready';
         $('#statSeed').textContent=job.seed??payload.seed??'—'; $('#statModel').textContent=(job.model||payload.model||'workflow').split('/').pop();
         addHistory({...job,prompt:payload.prompt,provider:payload.provider,settings:{aspect:payload.aspect,quality:payload.quality,duration:payload.duration,fps:payload.fps}});
       } else if(job.status==='error'){clearInterval(state.poller);state.poller=null;state.currentJob=null;generationError(job.message||'Generation failed')}
@@ -121,7 +135,7 @@ function pollJob(id,payload){
 }
 
 function generationError(msg){setGenerating(false);$('#progressState').classList.add('hidden');$('#emptyState').classList.remove('hidden');$('#statusPill').className='status error';$('#statusPill').textContent='Error';showNotice(msg)}
-$('#cancelBtn').onclick=async()=>{if(!state.currentJob)return;await fetch(`/api/jobs/${state.currentJob}/cancel`,{method:'POST'}).catch(()=>{});};
+$('#cancelBtn').onclick=async()=>{if(!state.currentJob)return;await fetch(apiUrl(`/api/jobs/${state.currentJob}/cancel`),{method:'POST'}).catch(()=>{});};
 
 function addHistory(job){
   state.history=[{id:job.id,createdAt:job.createdAt||Date.now(),prompt:job.prompt,videoUrl:job.videoUrl,downloadUrl:job.downloadUrl,provider:job.provider,model:job.model||'',seed:job.seed??'',settings:job.settings||{}},...state.history.filter(x=>x.id!==job.id)].slice(0,30);
@@ -134,5 +148,20 @@ function renderHistory(){
   $$('.reuse').forEach(b=>b.onclick=()=>{const item=state.history.find(x=>x.id===b.dataset.id);if(!item)return;$('#prompt').value=item.prompt;$('#prompt').dispatchEvent(new Event('input'));showView('create')});
 }
 $('#clearHistoryBtn').onclick=()=>{state.history=[];localStorage.removeItem('videonova-history');renderHistory()};
+
+const backendInput=$('#backendUrl');
+if(backendInput) backendInput.value=API_BASE;
+const saveBackendBtn=$('#saveBackendBtn');
+if(saveBackendBtn) saveBackendBtn.onclick=()=>{
+  const value=(backendInput?.value||'').trim().replace(/\/+$/, '');
+  if(value && !/^https:\/\//i.test(value) && IS_GITHUB_PAGES){
+    showNotice('For GitHub Pages, the backend URL must use HTTPS.');
+    showView('create');
+    return;
+  }
+  if(value) localStorage.setItem('videonova-api-base', value);
+  else localStorage.removeItem('videonova-api-base');
+  location.reload();
+};
 
 loadConfig(); renderHistory();
