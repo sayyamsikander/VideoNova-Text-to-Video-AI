@@ -36,6 +36,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", "").strip()
 HF_PROVIDER = os.getenv("HF_PROVIDER", "fal-ai").strip() or "fal-ai"
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
 COMFYUI_WORKFLOW = Path(os.getenv("COMFYUI_WORKFLOW", str(CONFIG_DIR / "comfyui_api_workflow.json")))
+CORS_ORIGIN = os.getenv("CORS_ORIGIN", "*").strip() or "*"
 
 JOBS = {}
 JOBS_LOCK = threading.Lock()
@@ -297,12 +298,24 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print(f"[{self.log_date_time_string()}] {fmt % args}")
 
+    def send_cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", CORS_ORIGIN)
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Vary", "Origin")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_cors_headers()
+        self.end_headers()
+
     def send_json(self, obj, status=200):
         data = json.dumps(obj).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_cors_headers()
         self.end_headers()
         self.wfile.write(data)
 
@@ -352,6 +365,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Accept-Ranges", "bytes")
             if path.startswith("/api/download/"):
                 self.send_header("Content-Disposition", f'attachment; filename="videonova-{filename}"')
+            self.send_cors_headers()
             self.end_headers()
             with file_path.open("rb") as f:
                 while True:
@@ -373,6 +387,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-cache")
+        self.send_cors_headers()
         self.end_headers()
         self.wfile.write(data)
 
