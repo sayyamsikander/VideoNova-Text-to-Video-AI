@@ -1,5 +1,5 @@
 const $ = (s) => document.querySelector(s);
-const $ = (s) => [...document.querySelectorAll(s)];
+const $$ = (s) => [...document.querySelectorAll(s)];
 const IS_GITHUB_PAGES = location.hostname.endsWith('.github.io');
 const API_BASE = (localStorage.getItem('videonova-api-base') || '').replace(/\/+$/, '');
 const apiUrl = (path) => `${API_BASE}${path}`;
