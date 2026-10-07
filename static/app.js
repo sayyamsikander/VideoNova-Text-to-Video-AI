@@ -56,7 +56,20 @@ async function loadConfig(){
     if(!state.config.hf.configured && state.config.comfyui.configured) $('#provider').value='comfyui';
     updateModels();
     if(!ready.length) showNotice('No generation engine is configured yet. Open Setup for instructions.');
-  }catch(e){ showNotice('Could not load server configuration. Make sure you started server.py.'); }
+  }catch(e){
+    if(IS_GITHUB_PAGES && API_BASE){
+      const hasToken=!!getBrowserToken();
+      state.config={hf:{configured:hasToken,models:['Wan-AI/Wan2.2-TI2V-5B','tencent/HunyuanVideo','Lightricks/LTX-Video-0.9.8-13B-distilled']},comfyui:{configured:false}};
+      $('#provider').value='hf';
+      $('#provider').querySelector('option[value="comfyui"]').disabled=true;
+      $('#providerBadge').textContent=hasToken?'Backend offline · HF browser ready':'Backend offline';
+      $('#providerBadge').style.color=hasToken?'#ffcf70':'#ff9ba5';
+      updateModels();
+      showNotice(hasToken?'The saved backend URL is not responding, so VideoNova can use your browser Hugging Face token instead. Reset the backend URL in Setup to make browser mode the default.':'The saved backend URL is not responding. Open Setup and click Reset backend, then add a Hugging Face token for direct browser generation.');
+      return;
+    }
+    showNotice('Could not load server configuration. Make sure you started server.py.');
+  }
 }
 
 function updateModels(){
@@ -146,7 +159,7 @@ async function runBrowserHf(payload){
   },1800);
 
   try{
-    const mod=await import('https://esm.sh/@huggingface/inference@4.13.30');
+    const mod=await import('https://cdn.jsdelivr.net/npm/@huggingface/inference@4.13.30/+esm');
     const client=new mod.InferenceClient(token);
     const seed=payload.seed ?? Math.floor(Math.random()*2147483647);
     const frames=Math.min(161,Math.max(33,payload.duration*payload.fps+1));
@@ -160,7 +173,7 @@ async function runBrowserHf(payload){
 
     const videoBlob=await client.textToVideo({
       model:payload.model || 'Wan-AI/Wan2.2-TI2V-5B',
-      provider:'fal-ai',
+      provider:'auto',
       inputs:payload.prompt,
       parameters
     });
@@ -280,6 +293,11 @@ if(saveBackendBtn) saveBackendBtn.onclick=()=>{
   }
   if(value) localStorage.setItem('videonova-api-base', value);
   else localStorage.removeItem('videonova-api-base');
+  location.reload();
+};
+const clearBackendBtn=$('#clearBackendBtn');
+if(clearBackendBtn) clearBackendBtn.onclick=()=>{
+  localStorage.removeItem('videonova-api-base');
   location.reload();
 };
 
