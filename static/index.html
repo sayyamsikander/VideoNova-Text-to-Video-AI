@@ -93,24 +93,25 @@
     <section id="setupView" class="view">
       <div class="section-page-head"><div><p class="eyebrow">SETUP</p><h1>Connect a generation engine</h1></div></div>
       <div class="setup-grid">
-        <article class="panel setup-card"><span class="setup-num">A</span><h2>Hugging Face — easiest online setup</h2><p>Install the Python dependency, create a Hugging Face token with Inference Providers permission, then put it in your environment. Your token stays on the server and is never sent to the browser.</p><pre><code>pip install -r requirements.txt
+        <article class="panel setup-card browser-card"><span class="setup-num">A</span><h2>GitHub Pages — direct Hugging Face</h2><p>This makes the static GitHub Pages site generate videos without <code>server.py</code>. Paste your Hugging Face token below. It is stored only in this browser tab and is sent directly to Hugging Face.</p><label>HF token<input id="hfBrowserToken" type="password" autocomplete="off" placeholder="hf_..." /></label><div class="history-actions"><button id="saveHfTokenBtn" class="primary">Use token</button><button id="clearHfTokenBtn" class="secondary">Clear</button></div><p id="hfTokenState" class="muted">No browser token saved.</p><p class="muted">For a public production app, use a hosted backend instead of exposing a personal token in the browser.</p></article>
+        <article class="panel setup-card"><span class="setup-num">B</span><h2>Hosted Hugging Face backend</h2><p>Install the Python dependency, create a Hugging Face token with Inference Providers permission, then put it in your environment. Your token stays on the server and is never sent to the browser.</p><pre><code>pip install -r requirements.txt
 export HF_TOKEN=hf_your_token_here
 ./start.sh</code></pre><p class="muted">Default routed provider: <code>fal-ai</code>. You can change it with <code>HF_PROVIDER</code>.</p></article>
-        <article class="panel setup-card"><span class="setup-num">B</span><h2>ComfyUI — no API bill</h2><p>Run ComfyUI locally, load a text-to-video workflow such as Wan 2.2, then export the workflow in <strong>API format</strong>. Save it as <code>config/comfyui_api_workflow.json</code>.</p><p>Replace the values you want this website to control with placeholders:</p><pre><code>__PROMPT__
+        <article class="panel setup-card"><span class="setup-num">C</span><h2>ComfyUI — no API bill</h2><p>Run ComfyUI locally, load a text-to-video workflow such as Wan 2.2, then export the workflow in <strong>API format</strong>. Save it as <code>config/comfyui_api_workflow.json</code>.</p><p>Replace the values you want this website to control with placeholders:</p><pre><code>__PROMPT__
 __NEGATIVE_PROMPT__
 __SEED__
 __WIDTH__
 __HEIGHT__
 __FRAMES__
 __FPS__</code></pre><p class="muted">The workflow must include a node that saves the final video so the server can fetch it from ComfyUI history.</p></article>
-        <article class="panel setup-card"><span class="setup-num">C</span><h2>Start the site</h2><p>Copy <code>.env.example</code> to <code>.env</code>, add your preferred engine settings, and run the included launcher.</p><pre><code># macOS / Linux
+        <article class="panel setup-card"><span class="setup-num">D</span><h2>Run the Python backend locally</h2><p>Copy <code>.env.example</code> to <code>.env</code>, add your preferred engine settings, and run the included launcher.</p><pre><code># macOS / Linux
 cp .env.example .env
 ./start.sh
 
 # Windows
 python server.py</code></pre><p>Open <code>http://127.0.0.1:8080</code>.</p></article>
 
-        <article class="panel setup-card"><span class="setup-num">D</span><h2>GitHub Pages backend</h2><p>GitHub Pages can host this interface, but it cannot run <code>server.py</code>. After deploying the Python backend on a server host, paste its HTTPS URL here.</p><label>Backend URL<input id="backendUrl" type="url" placeholder="https://your-backend.example.com" /></label><button id="saveBackendBtn" class="primary" style="margin-top:12px">Save backend URL</button><p class="muted">Leave empty when running the frontend and backend on the same server.</p></article>
+        <article class="panel setup-card"><span class="setup-num">E</span><h2>Connect a hosted backend</h2><p>GitHub Pages can host this interface, but it cannot run <code>server.py</code>. After deploying the Python backend on a server host, paste its HTTPS URL here.</p><label>Backend URL<input id="backendUrl" type="url" placeholder="https://your-backend.example.com" /></label><button id="saveBackendBtn" class="primary" style="margin-top:12px">Save backend URL</button><p class="muted">Leave empty when running the frontend and backend on the same server.</p></article>
       </div>
     </section>
   </main>
