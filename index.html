@@ -111,7 +111,7 @@ cp .env.example .env
 # Windows
 python server.py</code></pre><p>Open <code>http://127.0.0.1:8080</code>.</p></article>
 
-        <article class="panel setup-card"><span class="setup-num">E</span><h2>Connect a hosted backend</h2><p>GitHub Pages can host this interface, but it cannot run <code>server.py</code>. After deploying the Python backend on a server host, paste its HTTPS URL here.</p><label>Backend URL<input id="backendUrl" type="url" placeholder="https://your-backend.example.com" /></label><button id="saveBackendBtn" class="primary" style="margin-top:12px">Save backend URL</button><p class="muted">Leave empty when running the frontend and backend on the same server.</p></article>
+        <article class="panel setup-card"><span class="setup-num">E</span><h2>Connect a hosted backend</h2><p>GitHub Pages can host this interface, but it cannot run <code>server.py</code>. After deploying the Python backend on a server host, paste its HTTPS URL here.</p><label>Backend URL<input id="backendUrl" type="url" placeholder="https://your-backend.example.com" /></label><div class="history-actions"><button id="saveBackendBtn" class="primary">Save backend URL</button><button id="clearBackendBtn" class="secondary">Reset backend</button></div><p class="muted">Leave empty when running the frontend and backend on the same server.</p></article>
       </div>
     </section>
   </main>
