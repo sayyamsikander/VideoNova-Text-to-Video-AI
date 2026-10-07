@@ -1,3 +1,0 @@
-{
-  "README": "Replace this file with a ComfyUI workflow exported in API format. In the exported JSON, replace values you want the website to control with these exact placeholders: __PROMPT__, __NEGATIVE_PROMPT__, __SEED__, __WIDTH__, __HEIGHT__, __FRAMES__, __FPS__. The server replaces placeholders recursively before POSTing the graph to ComfyUI /prompt. Your workflow must save a video output (MP4/WebM) so it appears in ComfyUI history."
-}
