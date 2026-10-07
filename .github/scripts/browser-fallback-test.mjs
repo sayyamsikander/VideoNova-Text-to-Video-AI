@@ -4,7 +4,7 @@ async function getPage() {
   for (let attempt = 0; attempt < 30; attempt++) {
     try {
       const pages = await fetch('http://127.0.0.1:9222/json').then(r => r.json());
-      const page = pages.find(p => String(p.url).includes('selftest=fallback'));
+      const page = pages.find(p => String(p.url).includes('127.0.0.1:8001'));
       if (page) return page;
     } catch {}
     await sleep(500);
