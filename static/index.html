@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VideoNova — Text to Video AI</title>
   <meta name="description" content="Generate AI videos from text using Hugging Face providers or a local ComfyUI workflow." />
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div class="bg-orb orb-a"></div><div class="bg-orb orb-b"></div>
@@ -109,11 +109,13 @@ cp .env.example .env
 
 # Windows
 python server.py</code></pre><p>Open <code>http://127.0.0.1:8080</code>.</p></article>
+
+        <article class="panel setup-card"><span class="setup-num">D</span><h2>GitHub Pages backend</h2><p>GitHub Pages can host this interface, but it cannot run <code>server.py</code>. After deploying the Python backend on a server host, paste its HTTPS URL here.</p><label>Backend URL<input id="backendUrl" type="url" placeholder="https://your-backend.example.com" /></label><button id="saveBackendBtn" class="primary" style="margin-top:12px">Save backend URL</button><p class="muted">Leave empty when running the frontend and backend on the same server.</p></article>
       </div>
     </section>
   </main>
 
   <footer class="shell footer">VideoNova · local-first text-to-video starter · keep provider keys server-side</footer>
-  <script src="/app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
