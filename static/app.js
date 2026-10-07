@@ -65,6 +65,8 @@ async function loadConfig(){
 
     if(!cfg.torchInstalled || !cfg.diffusersInstalled){
       showNotice('Local AI dependencies are missing. Run: pip install -r requirements.txt');
+    } else if(!cfg.gpuDetected){
+      showNotice('No supported GPU was detected. Install a GPU-enabled PyTorch build and use an NVIDIA CUDA GPU or Apple Silicon/MPS.');
     } else if(!cfg.modelPresent && cfg.autoDownload){
       showNotice('Ready. The open-source model will download anonymously on the first generation, then run from your local model files.');
     } else if(!cfg.modelPresent){
